@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Phishing Detector</title>
+</head>
+<body>
+
+<h1>Phishing Scam Link Detector</h1>
+
+<form method="POST" action="/scan">
+
+    <input type="text"
+           name="url"
+           placeholder="Enter URL">
+
+    <button type="submit">
+        Scan URL
+    </button>
+
+</form>
+
+{% if result %}
+
+<h2>Detection Result</h2>
+
+<p>Risk Level: {{ result.risk_level }}</p>
+<p>Risk Score: {{ result.risk_score }}</p>
+<p>Recommendation: {{ result.recommendation }}</p>
+
+{% endif %}
+
+</body>
+</html>
