@@ -2,31 +2,39 @@
 <html>
 <head>
     <title>Phishing Detector</title>
+    <style>
+        .error { color: red; font-weight: bold; }
+        .result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+    </style>
 </head>
 <body>
 
 <h1>Phishing Scam Link Detector</h1>
 
 <form method="POST" action="/scan">
-
     <input type="text"
            name="url"
-           placeholder="Enter URL">
-
-    <button type="submit">
-        Scan URL
-    </button>
-
+           placeholder="Enter URL (e.g., https://example.com)"
+           style="width: 300px;">
+    <button type="submit">Scan URL</button>
 </form>
 
+{% if error %}
+<div class="error">
+    <h2>Error</h2>
+    <p>{{ error }}</p>
+</div>
+{% endif %}
+
 {% if result %}
-
-<h2>Detection Result</h2>
-
-<p>Risk Level: {{ result.risk_level }}</p>
-<p>Risk Score: {{ result.risk_score }}</p>
-<p>Recommendation: {{ result.recommendation }}</p>
-
+<div class="result">
+    <h2>Detection Result</h2>
+    <p><strong>URL:</strong> {{ result.url }}</p>
+    <p><strong>Risk Level:</strong> {{ result.risk_level }}</p>
+    <p><strong>Risk Score:</strong> {{ result.risk_score }}%</p>
+    <p><strong>Malicious Engines:</strong> {{ result.malicious_engines }} / {{ result.total_engines }}</p>
+    <p><strong>Recommendation:</strong> {{ result.recommendation }}</p>
+</div>
 {% endif %}
 
 </body>
