@@ -8,9 +8,9 @@ import time
 API_KEY = "0bf96eb9a08d1bdc13173064bca11c510f0c39ed5e61cadd1b760f0251ba61a1"
 
 def calculate_risk_level(score):
-    if score >= 50:
+    if score >= 30:
         return "HIGH"
-    elif score >= 20:
+    elif score >= 10:
         return "MEDIUM"
     elif score > 0:
         return "LOW"
@@ -80,7 +80,7 @@ def detect_phishing(url):
             total = 1  # Prevent division by zero
 
         risk_score = round(
-            ((malicious * 2 + suspicious) / (total * 2)) * 100,
+            ((malicious * 10 + suspicious * 5) / (total * 10)) * 100,
             2
         )
 
@@ -90,7 +90,7 @@ def detect_phishing(url):
             "url": url,
             "risk_score": risk_score,
             "risk_level": risk_level,
-            "is_phishing": malicious > 0,
+            "is_phishing": malicious >= 3 or (malicious >= 1 and risk_score >= 30),
             "malicious_engines": malicious,
             "suspicious_engines": suspicious,
             "total_engines": total,

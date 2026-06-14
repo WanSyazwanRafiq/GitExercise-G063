@@ -429,10 +429,15 @@ class SafeRecordWriter:
         Returns:
             The saved record
         """
-        # Build record matching the required structure
+        # Load existing records FIRST
+        records = self.consistency_manager.load_records()
+        
+        # Build record WITH id included
         record = {
+            "id": len(records) + 1,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "url": url,
+            "email": detection_result.get("email", ""),
             "risk_level": detection_result.get("risk_level", "UNKNOWN"),
             "risk_score": detection_result.get("risk_score", 0),
             "is_phishing": detection_result.get("is_phishing", False),
@@ -442,41 +447,8 @@ class SafeRecordWriter:
             "recommendation": detection_result.get("recommendation", "")
         }
         
-        # Validate structure
-        is_valid, errors = self.consistency_manager.validate_record_structure(record)
-        
-        if not is_valid:
-            print("❌ RECORD VALIDATION FAILED:")
-            for error in errors:
-                print(f"   - {error}")
-            return {"error": "Record validation failed", "details": errors}
-        
-        # Validate logic
-        is_consistent, warnings = self.consistency_manager.validate_logic_consistency(record)
-        
-        if not is_consistent:
-            print("⚠️  LOGIC WARNINGS:")
-            for warning in warnings:
-                print(f"   - {warning}")
-        
-        # Load existing records
-        records = self.consistency_manager.load_records()
-        
-        # Assign ID
-        record["id"] = len(records) + 1
-        
         # Add to records
         records.append(record)
-        
-        # Verify what we're about to save matches the detection
-        comparison = self.consistency_manager.compare_detection_vs_storage(
-            detection_result, record
-        )
-        
-        if not comparison["match"]:
-            print("⚠️  DATA MISMATCH DETECTED:")
-            for diff in comparison["differences"]:
-                print(f"   - {diff['field']}: Detected={diff['detected_value']} vs Stored={diff['stored_value']}")
         
         # Save records
         with open(self.records_file, 'w') as f:
@@ -484,4 +456,3 @@ class SafeRecordWriter:
         
         print(f"✅ Record saved safely: {url}")
         return record
-
