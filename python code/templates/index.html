@@ -658,31 +658,47 @@
     }
 
     function displayResult(link, data) {
-        let box = document.getElementById("resultBox");
-        let domain = link.replace('https://', '').replace('http://', '').split('/')[0];
-        
-        let riskLevel = data.risk_level || "CLEAN";
-        let riskScore = data.risk_score || 0;
-        let isPhishing = data.is_phishing || false;
+    let box = document.getElementById("resultBox");
+    let domain = link.replace('https://', '').replace('http://', '').split('/')[0];
+    
+    let riskLevel = data.risk_level || "CLEAN";
+    let riskScore = data.risk_score || 0;
+    let isPhishing = data.is_phishing || false;
 
-        let colorClass = riskLevel === "HIGH" ? "high" : riskLevel === "MEDIUM" ? "medium" : "safe";
-        let barColor = riskLevel === "HIGH" ? "#ef4444" : riskLevel === "MEDIUM" ? "#facc15" : "#22c55e";
-        let resultText = isPhishing ? "HIGH RISK - Phishing Detected!" : 
-                        riskLevel === "MEDIUM" ? "MEDIUM RISK - Suspicious" : "SAFE - Low Risk";
-
-        box.innerHTML = `
-            <div class="result-title ${colorClass}">${resultText}</div>
-            <div class="score-circle" style="background: conic-gradient(${barColor} ${riskScore * 3.6}deg, #374151 0deg); color:${barColor};">
-                <div class="score-number">${riskScore}%</div>
-            </div>
-            <div class="result-info"><strong>Domain:</strong> ${domain}</div>
-            <div class="result-info"><strong>Risk Level:</strong> ${riskLevel}</div>
-            <div class="result-info"><strong>Malicious Engines:</strong> ${data.malicious_engines || 0}</div>
-            <div class="result-info"><strong>Suspicious Engines:</strong> ${data.suspicious_engines || 0}</div>
-            <div class="result-info"><strong>Total Engines:</strong> ${data.total_engines || 0}</div>
-            <div class="result-info"><strong>Scan Time:</strong> ${new Date().toLocaleString()}</div>
-        `;
+    // Fix: Determine colors and text correctly
+    let colorClass, barColor, resultText;
+    
+    if (riskLevel === "HIGH" || isPhishing) {
+        colorClass = "high";
+        barColor = "#ef4444";
+        resultText = "🚨 HIGH RISK - Phishing Detected!";
+    } else if (riskLevel === "MEDIUM") {
+        colorClass = "medium";
+        barColor = "#facc15";
+        resultText = "⚠️ MEDIUM RISK - Suspicious";
+    } else if (riskLevel === "LOW") {
+        colorClass = "safe";
+        barColor = "#22c55e";
+        resultText = "✅ LOW RISK - Mostly Safe";
+    } else {
+        colorClass = "safe";
+        barColor = "#22c55e";
+        resultText = "✅ SAFE - No Threats Found";
     }
+
+    box.innerHTML = `
+        <div class="result-title ${colorClass}">${resultText}</div>
+        <div class="score-circle" style="background: conic-gradient(${barColor} ${riskScore * 3.6}deg, #374151 0deg); color:${barColor};">
+            <div class="score-number">${riskScore}%</div>
+        </div>
+        <div class="result-info"><strong>Domain:</strong> ${domain}</div>
+        <div class="result-info"><strong>Risk Level:</strong> ${riskLevel}</div>
+        <div class="result-info"><strong>Malicious Engines:</strong> ${data.malicious_engines || 0}</div>
+        <div class="result-info"><strong>Suspicious Engines:</strong> ${data.suspicious_engines || 0}</div>
+        <div class="result-info"><strong>Total Engines:</strong> ${data.total_engines || 0}</div>
+        <div class="result-info"><strong>Scan Time:</strong> ${new Date().toLocaleString()}</div>
+    `;
+}
 
     function saveData(email, link, result, score) {
         let data = JSON.parse(localStorage.getItem("links")) || [];

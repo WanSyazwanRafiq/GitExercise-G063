@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from detector import detect_phishing
+from database import Database
 from data_consistency import SafeRecordWriter
 from admin_panel import AdminPanel
 import os
@@ -10,6 +11,7 @@ app = Flask(__name__)
 
 writer = SafeRecordWriter("scan_records.json")
 admin = AdminPanel("scan_records.json")
+db = Database("phishing_detector.db")
 
 @app.route("/")
 def home():
@@ -35,6 +37,7 @@ def scan():
     detection_result["email"] = email
     
     writer.add_record_safely(url, detection_result)
+    db.add_scan(url, detection_result, email)
     
     return jsonify(detection_result)
 
