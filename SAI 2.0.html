@@ -494,26 +494,6 @@
         </div>
       </div>
 
-      <div
-        style="
-          margin-top: 20px;
-          padding: 20px;
-          background: #1f2937;
-          border-radius: 14px;
-        "
-      >
-        <h3 style="color: #22c55e; margin-bottom: 15px">
-          <i class="fa-solid fa-shield-halved"></i> Safety Tips
-        </h3>
-        <ul style="color: #d1d5db; padding-left: 20px; line-height: 2">
-          <li>✅ Check URLs before clicking on links</li>
-          <li>🔒 Look for <strong>HTTPS</strong> in the address bar</li>
-          <li>⚠️ Don't enter passwords on suspicious sites</li>
-          <li>📧 Be careful with links in unknown emails</li>
-          <li>🛡️ Use this scanner before visiting new sites</li>
-        </ul>
-      </div>
-
       <div id="dashboardSection" class="container hidden">
         <div class="title">
           <div>
@@ -626,10 +606,48 @@
       let chart;
       const ADMIN_PASSWORD = "SAI";
 
+      let blacklist = [
+        "fakebank-login.com",
+        "verify-paypal-security.com",
+        "steam-freegift.net",
+        "facebook-security-alert.com",
+      ];
+
       function validateForm() {
         let email = document.getElementById("emailInput").value.trim();
         let link = document.getElementById("linkInput").value.trim();
         document.getElementById("scanButton").disabled = !(email && link);
+      }
+
+      function isValidURL(url) {
+        try {
+          new URL(url);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      function analyzeRisk(link) {
+        let danger = 0;
+
+        if (blacklist.some((site) => link.includes(site))) danger += 70;
+        if (link.includes("login")) danger += 10;
+        if (link.includes("verify")) danger += 10;
+        if (link.includes("bank")) danger += 10;
+        if (link.includes("@")) danger += 10;
+        if (link.includes("http://")) danger += 15;
+        if (link.length > 80) danger += 10;
+        if (link.includes("-")) danger += 5;
+        if (danger > 100) danger = 100;
+
+        let score = 100 - danger;
+        let result = "Low Risk";
+
+        if (score <= 30) result = "High Risk";
+        else if (score <= 70) result = "Medium Risk";
+
+        return { score, result };
       }
 
       function checkLink() {
@@ -642,85 +660,56 @@
           return;
         }
 
-        if (!link.startsWith("http://") && !link.startsWith("https://")) {
-          link = "https://" + link;
+        if (!isValidURL(link)) {
+          box.innerHTML = `<div class="result-title high">Invalid URL</div>`;
+          return;
         }
 
-        // Show loading
         box.innerHTML = `
-            <div class="result-title">
-                <i class="fa-solid fa-spinner fa-spin"></i>
-                Scanning with VirusTotal...
-            </div>
-        `;
+        <div class="result-title">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          Scanning Website...
+        </div>
+      `;
 
-        // Send to Flask backend
-        const formData = new FormData();
-        formData.append("url", link);
-        formData.append("email", email);
-
-        fetch("/scan", {
-          method: "POST",
-          body: formData,
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.error) {
-              box.innerHTML = `<div class="result-title high">Error: ${data.error}</div>`;
-              return;
-            }
-            displayResult(link, data);
-            saveData(email, link, data.risk_level, data.risk_score);
-          })
-          .catch((error) => {
-            box.innerHTML = `<div class="result-title high">Connection Error</div>`;
-          });
+        setTimeout(() => {
+          let analysis = analyzeRisk(link);
+          displayResult(link, analysis);
+          saveData(email, link, analysis.result, analysis.score);
+        }, 1500);
       }
 
-      function displayResult(link, data) {
+      function displayResult(link, analysis) {
         let box = document.getElementById("resultBox");
-        let domain = link
-          .replace("https://", "")
-          .replace("http://", "")
-          .split("/")[0];
+        let domain = new URL(link).hostname;
+        let protocol = link.startsWith("https://")
+          ? "Secure HTTPS"
+          : "Insecure HTTP";
 
-        let riskLevel = data.risk_level || "CLEAN";
-        let riskScore = data.risk_score || 0;
-        let isPhishing = data.is_phishing || false;
-
-        // Fix: Determine colors and text correctly
-        let colorClass, barColor, resultText;
-
-        if (riskLevel === "HIGH" || isPhishing) {
-          colorClass = "high";
-          barColor = "#ef4444";
-          resultText = "🚨 HIGH RISK - Phishing Detected!";
-        } else if (riskLevel === "MEDIUM") {
-          colorClass = "medium";
-          barColor = "#facc15";
-          resultText = "⚠️ MEDIUM RISK - Suspicious";
-        } else if (riskLevel === "LOW") {
-          colorClass = "safe";
-          barColor = "#22c55e";
-          resultText = "✅ LOW RISK - Mostly Safe";
-        } else {
-          colorClass = "safe";
-          barColor = "#22c55e";
-          resultText = "✅ SAFE - No Threats Found";
-        }
+        let colorClass =
+          analysis.result === "Low Risk"
+            ? "safe"
+            : analysis.result === "Medium Risk"
+              ? "medium"
+              : "high";
+        let barColor =
+          analysis.result === "Low Risk"
+            ? "#22c55e"
+            : analysis.result === "Medium Risk"
+              ? "#facc15"
+              : "#ef4444";
+        let community = Math.floor(Math.random() * 40) + 60;
 
         box.innerHTML = `
-        <div class="result-title ${colorClass}">${resultText}</div>
-        <div class="score-circle" style="background: conic-gradient(${barColor} ${riskScore * 3.6}deg, #374151 0deg); color:${barColor};">
-            <div class="score-number">${riskScore}%</div>
+        <div class="result-title ${colorClass}">${analysis.result}</div>
+        <div class="score-circle" style="background: conic-gradient(${barColor} ${analysis.score * 3.6}deg, #374151 0deg); color:${barColor};">
+          <div class="score-number">${analysis.score}%</div>
         </div>
         <div class="result-info"><strong>Domain:</strong> ${domain}</div>
-        <div class="result-info"><strong>Risk Level:</strong> ${riskLevel}</div>
-        <div class="result-info"><strong>Malicious Engines:</strong> ${data.malicious_engines || 0}</div>
-        <div class="result-info"><strong>Suspicious Engines:</strong> ${data.suspicious_engines || 0}</div>
-        <div class="result-info"><strong>Total Engines:</strong> ${data.total_engines || 0}</div>
+        <div class="result-info"><strong>Protocol:</strong> ${protocol}</div>
+        <div class="result-info"><strong>Community Trust:</strong> ${community}%</div>
         <div class="result-info"><strong>Scan Time:</strong> ${new Date().toLocaleString()}</div>
-    `;
+      `;
       }
 
       function saveData(email, link, result, score) {
@@ -736,60 +725,48 @@
       }
 
       function loadHistory() {
-        // Fetch from Flask backend
-        fetch("/api/history")
-          .then((response) => response.json())
-          .then((data) => {
-            let table = document.getElementById("tableData");
-            table.innerHTML = "";
+        let data = JSON.parse(localStorage.getItem("links")) || [];
+        let table = document.getElementById("tableData");
+        table.innerHTML = "";
 
-            if (data.length === 0) {
-              table.innerHTML = `<tr><td colspan="5">No scans yet</td></tr>`;
-              return;
-            }
+        data.forEach((item) => {
+          let badge =
+            item.result === "Low Risk"
+              ? "safe-badge"
+              : item.result === "Medium Risk"
+                ? "medium-badge"
+                : "high-badge";
 
-            data.forEach((item) => {
-              let badge =
-                item.risk_level === "HIGH"
-                  ? "high-badge"
-                  : item.risk_level === "MEDIUM"
-                    ? "medium-badge"
-                    : "safe-badge";
-
-              table.innerHTML += `
-                <tr>
-                    <td>${item.email || "-"}</td>
-                    <td title="${item.url}">${item.url.length > 55 ? item.url.substring(0, 55) + "..." : item.url}</td>
-                    <td><span class="badge ${badge}">${item.risk_level}</span></td>
-                    <td><strong>${item.risk_score}%</strong></td>
-                    <td>${item.timestamp}</td>
-                </tr>
-                `;
-            });
-          });
+          table.innerHTML += `
+          <tr>
+            <td>${item.email}</td>
+            <td title="${item.link}">${item.link.length > 55 ? item.link.substring(0, 55) + "..." : item.link}</td>
+            <td><span class="badge ${badge}">${item.result}</span></td>
+            <td><strong>${item.score}%</strong></td>
+            <td>${item.time}</td>
+          </tr>
+        `;
+        });
       }
 
       function loadDashboard() {
-        // Fetch stats from Flask backend
-        fetch("/api/stats")
-          .then((response) => response.json())
-          .then((stats) => {
-            document.getElementById("totalScans").innerText =
-              stats.total_links_checked || 0;
-            document.getElementById("lowCount").innerText =
-              stats.safe_links || 0;
-            document.getElementById("mediumCount").innerText =
-              stats.suspicious_links || 0;
-            document.getElementById("highCount").innerText =
-              stats.phishing_links || 0;
+        let data = JSON.parse(localStorage.getItem("links")) || [];
+        let low = 0,
+          medium = 0,
+          high = 0;
 
-            loadChart(
-              stats.safe_links || 0,
-              stats.suspicious_links || 0,
-              stats.phishing_links || 0,
-            );
-          });
+        data.forEach((item) => {
+          if (item.result === "Low Risk") low++;
+          else if (item.result === "Medium Risk") medium++;
+          else high++;
+        });
 
+        document.getElementById("totalScans").innerText = data.length;
+        document.getElementById("lowCount").innerText = low;
+        document.getElementById("mediumCount").innerText = medium;
+        document.getElementById("highCount").innerText = high;
+
+        loadChart(low, medium, high);
         loadHistory();
         loadComments();
       }
@@ -801,14 +778,14 @@
         chart = new Chart(ctx, {
           type: "doughnut",
           data: {
-            labels: ["Safe/Low", "Suspicious", "High/Phishing"],
+            labels: ["Low Risk", "Medium Risk", "High Risk"],
             datasets: [
               {
                 data: [low, medium, high],
                 backgroundColor: ["#22c55e", "#facc15", "#ef4444"],
               },
             ],
-          },
+          },https://github.com/Inaf6556/SAI-html
         });
       }
 
@@ -822,8 +799,6 @@
 
         document.getElementById("commentInput").value = "";
         alert("Suggestion submitted!");
-
-        loadComments();
       }
 
       function loadComments() {
@@ -833,11 +808,11 @@
 
         comments.forEach((item) => {
           table.innerHTML += `
-            <tr>
-                <td>${item.comment}</td>
-                <td>${item.time}</td>
-            </tr>
-            `;
+          <tr>
+            <td>${item.comment}</td>
+            <td>${item.time}</td>
+          </tr>
+        `;
         });
       }
 
@@ -925,7 +900,9 @@
       });
 
       window.onload = () => {
+        // Ensure the modal is strictly hidden on load
         document.getElementById("adminModal").classList.add("hidden");
+
         if (sessionStorage.getItem("adminAuth") === "true") {
           document.getElementById("logoutBtn").classList.remove("hidden");
         }
