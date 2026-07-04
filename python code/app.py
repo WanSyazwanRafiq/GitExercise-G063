@@ -63,7 +63,7 @@ def api_history():
 @app.route("/dashboard")
 def dashboard():
     return render_template("dashboard.html")
-
+    
 if __name__ == "__main__":
     if not os.path.exists("templates"):
         os.makedirs("templates")

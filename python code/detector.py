@@ -49,7 +49,7 @@ def detect_phishing(url):
         analysis_id = response.json()["data"]["id"]
 
         # Wait for analysis to complete (VirusTotal is async)
-        time.sleep(5)  # Give time for analysis
+        time.sleep(15)  # Give time for analysis
         
         # Get report
         report_url = f"https://www.virustotal.com/api/v3/analyses/{analysis_id}"
